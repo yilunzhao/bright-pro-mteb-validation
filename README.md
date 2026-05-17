@@ -74,6 +74,48 @@ The MTEB task prompt is set to `"Given a {domain} post, retrieve relevant passag
 
 The three dense-embedding models reproduce BRIGHT-Pro's numbers within 3% on every cell, with two of them sub-1%. This confirms the MTEB task classes (`BrightPro{Domain}Retrieval`) pass identical corpora, queries, and qrels to the evaluation pipeline as BRIGHT-Pro's own harness — any remaining differences are attributable to model-side details (precision, EOS handling, tokenizer behaviour), not to the task integration.
 
+## Root cause analysis of the ReasonIR-8B gap
+
+The ~1–3 nDCG-point gap for ReasonIR-8B above is not noise. We traced it to a separate MTEB bug, **independent of this BrightPro task integration**, in [`mteb/models/abs_encoder.py`](https://github.com/embeddings-benchmark/mteb/blob/main/mteb/models/abs_encoder.py)'s `get_task_instruction`:
+
+```python
+if self.instruction_template and len(instruction) > 0:
+    return self.format_instruction(instruction, prompt_type)
+return instruction
+```
+
+When a task defines `prompt={"query": "..."}` without a `"document"` key (BRIGHT-Pro, BRIGHT, BRIGHT v1.1, and many other retrieval tasks), the document-side `instruction` is `""`. The `len(instruction) > 0` gate then causes `get_task_instruction` to return `""` directly — the model's `instruction_template` is **never invoked for documents**.
+
+For models whose `instruction_template` is a callable that emits a non-empty prefix on empty input — most prominently ReasonIR-8B and GritLM-7B (`<|embed|>\n`), also Octen, Sarashina v2 (`text: `), BMRetriever — the document-side prefix the model was *trained* with is silently dropped. Documents get encoded without the prefix.
+
+### Diagnostics
+
+The `scripts/verify_reasonir_*.py` + `results/diagnostics/verify_reasonir_*.json` files trace the gap step by step. The decisive observations on `BrightProBiologyRetrieval`:
+
+| diagnostic | finding |
+|---|---|
+| `verify_reasonir_full_eval.py` | Re-running ReasonIR via BRIGHT-Pro's own `AutoModel + custom .encode` on the full 60K corpus in our env: **nDCG@10 = 0.33755** (paper saved: 0.33322). |
+| `verify_reasonir_full_paths.py` | Side-by-side `AutoModel + custom .encode` vs MTEB's `InstructSentenceTransformerModel`: per-doc cosine **median 0.98, min 0.71** on 60K docs — the embeddings genuinely diverge. |
+| `verify_reasonir_strip.py` | MTEB's corpus `.strip()` preprocessing contributes only +0.002 nDCG. Not the main source. |
+| `verify_reasonir_chunking.py` | MTEB's 50K corpus chunking contributes 0 nDCG (Mode 1 = Mode 2 = 0.33792). Ruled out. |
+| `verify_reasonir_wrapper_vs_direct.py` | Wrapper vs direct `st.encode`: **per-doc cosine median 0.94**, query cosine 0.998. Bug specifically affects documents, not queries. |
+| `verify_reasonir_doc_prefix.py` | **Minimal isolation.** Same docs, same model, only difference is `prompt=""` vs `prompt="<\|embed\|>\n"`: 9985 / 10000 docs have cosine < 0.99 between the two encodings. nDCG@10 differs by 0.028. Definitive smoking gun. |
+
+### Empirical impact of the fix
+
+ReasonIR-8B × BrightProBiologyRetrieval, full 60K corpus:
+
+| pipeline | nDCG@10 |
+|---|---:|
+| BRIGHT-Pro paper saved | 0.33322 |
+| BRIGHT-Pro `AutoModel + custom .encode` (our env) | 0.33755 |
+| **MTEB pipeline (current upstream, buggy)** | **0.35323** |
+| **MTEB pipeline (with `get_task_instruction` fix)** | **0.34269** |
+
+The fix narrows the MTEB-vs-paper gap from +0.020 nDCG to +0.009 nDCG. The residual ~0.009 is implementation-level noise (sentence-transformers' tokenizer/padding vs HuggingFace's custom `.encode`, bf16 numerical precision).
+
+A separate MTEB issue + PR for this bug will reference this analysis.
+
 ## Layout
 
 ```
@@ -85,6 +127,8 @@ scripts/
   build_comparison.py  # aggregate JSON results -> markdown table
 results/
   BrightPro{Domain}Retrieval__{model_slug}.json  # one per cell
+  diagnostics/
+    verify_reasonir_*.json  # gap-investigation artifacts
 ```
 
 ## Reproducing

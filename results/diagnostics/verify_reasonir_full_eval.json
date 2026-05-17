@@ -1,0 +1,8 @@
+{
+  "ndcg_at_10_path_A": 0.33755,
+  "ndcg_at_10_bright_pro_saved": 0.33322,
+  "ndcg_at_10_mteb": 0.35323,
+  "batch_size": 8,
+  "n_queries": 103,
+  "n_docs": 59513
+}

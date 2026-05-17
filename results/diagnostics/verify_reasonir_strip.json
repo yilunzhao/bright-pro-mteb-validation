@@ -1,0 +1,14 @@
+{
+  "ndcg_PathA_raw_docs": 0.33755,
+  "ndcg_PathA_stripped_docs": 0.33966,
+  "delta_strip": 0.0021100000000000008,
+  "ndcg_PathA_full_eval_saved": 0.33755,
+  "ndcg_MTEB_pipeline_default": 0.35323,
+  "ndcg_MTEB_pipeline_include_prompt_false": 0.36438,
+  "bright_pro_paper": 0.33322,
+  "n_docs_strip_changed": 20679,
+  "n_queries": 103,
+  "n_docs": 59513,
+  "batch_size": 8,
+  "max_length": 4096
+}

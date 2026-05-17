@@ -1,0 +1,27 @@
+{
+  "ndcg_wrapper_dataloader": 0.79312,
+  "ndcg_direct_st_encode": 0.78507,
+  "delta_wrapper_minus_direct": 0.008050000000000002,
+  "ndcg_mteb_pipeline_default_saved": 0.35323,
+  "ndcg_pathA_BRIGHTPRO_style_saved": 0.33755,
+  "q_cosine_AB": {
+    "min": 0.9940847754478455,
+    "p1": 0.994400680065155,
+    "median": 0.9981517791748047,
+    "p99": 0.9991644620895386,
+    "max": 0.9991867542266846
+  },
+  "d_cosine_AB": {
+    "min": 0.2460629642009735,
+    "p1": 0.6261699199676514,
+    "median": 0.9433265924453735,
+    "p99": 0.987204372882843,
+    "max": 0.9934921264648438,
+    "n_below_0_99": 4981
+  },
+  "q_instr": "<|user|>\nGiven a biology post, retrieve relevant passages that help answer the post\n<|embed|>\n",
+  "d_instr": "<|embed|>\n",
+  "n_queries": 30,
+  "n_docs": 5000,
+  "batch_size": 8
+}

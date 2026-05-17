@@ -1,0 +1,19 @@
+{
+  "ndcg_mode1_single_60K": 0.33792,
+  "ndcg_mode2_chunked_50K": 0.33792,
+  "delta_chunked_minus_single": 0.0,
+  "ndcg_mteb_pipeline_default": 0.35323,
+  "ndcg_pathA_raw": 0.33755,
+  "ndcg_pathA_strip": 0.33966,
+  "n_docs": 59513,
+  "chunk_size": 50000,
+  "batch_size": 8,
+  "doc_cosine_single_vs_chunked": {
+    "0": 0.9999998211860657,
+    "1": 0.9999999403953552,
+    "50": 1.0,
+    "99": 1.000000238418579,
+    "100": 1.000000238418579
+  },
+  "docs_stripped": true
+}
