@@ -79,6 +79,13 @@ def main() -> None:
         #    the embedding head depends on. Without trust_remote_code=True,
         #    sentence-transformers loads stock causal Qwen2 and embeddings
         #    collapse to noise (~0.07 nDCG@10).
+        # 3) config.use_cache=False (set post-load below) — the remote
+        #    modeling_qwen.py wraps past_key_values in DynamicCache and calls
+        #    get_usable_length(), which transformers>=4.56 removed. Encoding
+        #    never needs the KV cache; use_cache=False skips that block.
+        #    NB: it must be set on the loaded config — passing it through
+        #    model_kwargs reaches the remote class constructor, which
+        #    rejects unknown kwargs.
         model_meta.loader_kwargs = {
             **model_meta.loader_kwargs,
             "model_kwargs": {"dtype": _torch.bfloat16},
@@ -93,6 +100,16 @@ def main() -> None:
         model = model_meta.load_model()
         if max_seq_length and hasattr(model, "model") and hasattr(model.model, "max_seq_length"):
             model.model.max_seq_length = int(max_seq_length)
+
+    if model_name == "Alibaba-NLP/gte-Qwen2-7B-instruct":
+        # See note 3 above: disable the KV-cache code path in the remote
+        # modeling code, which is incompatible with transformers>=4.56.
+        st_model = getattr(model, "model", None)
+        auto = st_model[0].auto_model if st_model is not None else None
+        if auto is None:
+            raise RuntimeError("could not reach gte auto_model to set use_cache=False")
+        auto.config.use_cache = False
+        print("set gte config.use_cache=False (post-load)")
 
     enc_kwargs = {"batch_size": batch_size}
 

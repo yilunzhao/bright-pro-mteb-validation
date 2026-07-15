@@ -74,6 +74,14 @@ The MTEB task prompt is set to `"Given a {domain} post, retrieve relevant passag
 
 The three dense-embedding models reproduce BRIGHT-Pro's numbers within 3% on every cell, with two of them sub-1%. This confirms the MTEB task classes (`BrightPro{Domain}Retrieval`) pass identical corpora, queries, and qrels to the evaluation pipeline as BRIGHT-Pro's own harness — any remaining differences are attributable to model-side details (precision, EOS handling, tokenizer behaviour), not to the task integration.
 
+## Re-validation on the mteb 2.18.1 rebase (2026-07-14)
+
+After rebasing the PR branch onto mteb `main` (2.18.1, which now includes the
+#4684 fix), all 4 retrievers were re-run end-to-end on the 7 BrightPro tasks.
+Dense models reproduce BRIGHT-Pro harness scores with mean |dnDCG@10| = 0.0029
+(max 0.0152); ReasonIR-8B is within +/-0.005 on every domain. Full table:
+[comparison_2p18.md](comparison_2p18.md), per-cell outputs in `results_2p18/`.
+
 ## Root cause analysis of the ReasonIR-8B gap
 
 The ~1–3 nDCG-point gap for ReasonIR-8B above is not noise. We traced it to a separate MTEB bug, **independent of this BrightPro task integration**, in [`mteb/models/abs_encoder.py`](https://github.com/embeddings-benchmark/mteb/blob/main/mteb/models/abs_encoder.py)'s `get_task_instruction`:
